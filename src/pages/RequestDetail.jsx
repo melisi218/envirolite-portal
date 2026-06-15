@@ -123,6 +123,10 @@ export default function RequestDetail() {
       {/* Edit form — extends below header when editing */}
       {editing && (
         <div className="bg-brand-navy px-5 pb-5 space-y-3 border-t border-white/10">
+          <input value={editForm.title}
+            onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="Project Name"
+            className="w-full bg-white/10 text-white placeholder-white/40 rounded-xl px-4 py-2.5 text-base font-semibold focus:outline-none border border-white/20" />
           <div className="relative">
             <select value={editForm.company_id}
               onChange={e => setEditForm(f => ({ ...f, company_id: e.target.value }))}
@@ -130,18 +134,6 @@ export default function RequestDetail() {
               {companies.map(c => <option key={c.id} value={c.id} className="text-black">{c.name}</option>)}
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
-          </div>
-          <input value={editForm.title}
-            onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-            placeholder="Project Name"
-            className="w-full bg-white/10 text-white placeholder-white/40 rounded-xl px-4 py-2.5 text-base font-semibold focus:outline-none border border-white/20" />
-          <div className="relative inline-block">
-            <select value={editForm.status}
-              onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
-              className={`appearance-none text-xs font-semibold px-3 py-1.5 rounded-full pr-7 focus:outline-none cursor-pointer ${STATUS_COLORS[editForm.status]}`}>
-              {STATUSES.map(s => <option key={s}>{s}</option>)}
-            </select>
-            <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
           </div>
         </div>
       )}
@@ -161,7 +153,7 @@ export default function RequestDetail() {
             onChange={e => { setNotes(e.target.value); setNotesDirty(true) }}
             placeholder="Add any notes or details..."
             rows={4}
-            className="w-full text-sm text-gray-700 placeholder-gray-300 focus:outline-none resize-none"
+            className="w-full text-sm text-gray-700 placeholder-gray-300 focus:outline-none resize-none border border-gray-200 rounded-xl px-3 py-3"
           />
           {notesDirty && (
             <button onClick={saveNotes} disabled={notesSaving}
