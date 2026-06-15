@@ -114,12 +114,12 @@ export default function NewRequest() {
   return (
     <div className="min-h-screen bg-brand-light">
       {/* Header */}
-      <div className="bg-brand-navy px-5 pt-4 pb-5 flex items-center gap-3">
+      <div className="bg-brand-navy px-5 pt-4 pb-5 relative flex flex-col items-center">
         <button onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20 flex-shrink-0">
+          className="absolute left-4 top-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20">
           <ArrowLeft size={18} className="text-white" />
         </button>
-        <h1 className="text-white text-xl font-semibold">New Project Request</h1>
+        <h1 className="text-white text-xl font-semibold mt-1">New Project Request</h1>
       </div>
 
       {/* Form */}

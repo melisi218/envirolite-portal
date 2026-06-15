@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { ChevronLeft, Plus, ChevronRight, ChevronDown, Edit2, Check } from 'lucide-react'
+import { ArrowLeft, Plus, ChevronRight, ChevronDown, Edit2, Check } from 'lucide-react'
 
 const STATUS_COLORS = {
   'In Progress': 'bg-blue-100 text-blue-600',
@@ -66,68 +66,76 @@ export default function RequestDetail() {
   return (
     <div>
       {/* Header */}
-      <div className="bg-brand-navy px-5 pt-4 pb-5">
-        <div className="flex items-center justify-between mb-3">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
-            <ChevronLeft size={16} /> Requests
+      <div className="bg-brand-navy px-5 pt-4 pb-5 relative flex flex-col items-center">
+        <button onClick={() => navigate(-1)}
+          className="absolute left-4 top-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20">
+          <ArrowLeft size={18} className="text-white" />
+        </button>
+        {!editing ? (
+          <button onClick={() => setEditing(true)}
+            className="absolute right-4 top-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20">
+            <Edit2 size={16} className="text-white" />
           </button>
-          {!editing ? (
-            <button onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 text-brand-blue text-sm active:opacity-70">
-              <Edit2 size={14} /> Edit
+        ) : (
+          <div className="absolute right-4 top-4 flex gap-3 items-center">
+            <button onClick={cancelEdit} className="text-white/50 text-sm">Cancel</button>
+            <button onClick={saveEdit} disabled={saving}
+              className="text-brand-blue text-sm font-semibold disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
             </button>
-          ) : (
-            <div className="flex gap-3">
-              <button onClick={cancelEdit} className="text-white/50 text-sm">Cancel</button>
-              <button onClick={saveEdit} disabled={saving}
-                className="flex items-center gap-1 text-brand-blue text-sm font-semibold disabled:opacity-50">
-                <Check size={14} /> {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {editing ? (
-          <div className="space-y-3">
-            {/* Company */}
-            <div className="relative">
-              <select value={editForm.company_id} onChange={e => setEditForm(f => ({ ...f, company_id: e.target.value }))}
-                className="w-full appearance-none bg-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none border border-white/20 pr-8">
-                {companies.map(c => <option key={c.id} value={c.id} className="text-black">{c.name}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
-            </div>
-            {/* Title */}
-            <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-              className="w-full bg-white/10 text-white placeholder-white/40 rounded-xl px-4 py-2.5 text-base font-semibold focus:outline-none border border-white/20"
-              placeholder="Project Name" />
-            {/* Notes */}
-            <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-              rows={3} placeholder="Notes..."
-              className="w-full bg-white/10 text-white/80 placeholder-white/40 rounded-xl px-4 py-2.5 text-sm focus:outline-none border border-white/20 resize-none" />
-            {/* Status */}
-            <div className="relative inline-block">
-              <select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
-                className={`appearance-none text-xs font-semibold px-3 py-1.5 rounded-full pr-7 focus:outline-none cursor-pointer ${STATUS_COLORS[editForm.status]}`}>
-                {STATUSES.map(s => <option key={s}>{s}</option>)}
-              </select>
-              <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-            </div>
+          <div className="w-full mt-1 space-y-3">
+            <h1 className="text-white text-xl font-semibold text-center">Edit Project</h1>
           </div>
         ) : (
           <>
-            <h1 className="text-white text-xl font-semibold leading-tight">{request.title}</h1>
+            <h1 className="text-white text-xl font-semibold mt-1 text-center">{request.title}</h1>
             {request.companies?.name && <p className="text-white/50 text-sm mt-0.5">{request.companies.name}</p>}
-            <div className="mt-3 relative inline-block">
-              <select value={request.status} onChange={e => updateStatus(e.target.value)}
-                className={`appearance-none text-xs font-semibold px-3 py-1.5 rounded-full pr-7 focus:outline-none cursor-pointer ${STATUS_COLORS[request.status]}`}>
-                {STATUSES.map(s => <option key={s}>{s}</option>)}
-              </select>
-              <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
-            </div>
           </>
         )}
       </div>
+
+      {/* Edit form - shown below header when editing */}
+      {editing && (
+        <div className="bg-brand-navy px-5 pb-5 space-y-3 border-t border-white/10">
+          <div className="relative">
+            <select value={editForm.company_id} onChange={e => setEditForm(f => ({ ...f, company_id: e.target.value }))}
+              className="w-full appearance-none bg-white/10 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none border border-white/20 pr-8">
+              {companies.map(c => <option key={c.id} value={c.id} className="text-black">{c.name}</option>)}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+          </div>
+          <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+            className="w-full bg-white/10 text-white placeholder-white/40 rounded-xl px-4 py-2.5 text-base font-semibold focus:outline-none border border-white/20"
+            placeholder="Project Name" />
+          <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+            rows={3} placeholder="Notes..."
+            className="w-full bg-white/10 text-white/80 placeholder-white/40 rounded-xl px-4 py-2.5 text-sm focus:outline-none border border-white/20 resize-none" />
+          <div className="relative inline-block">
+            <select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+              className={`appearance-none text-xs font-semibold px-3 py-1.5 rounded-full pr-7 focus:outline-none cursor-pointer ${STATUS_COLORS[editForm.status]}`}>
+              {STATUSES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+          </div>
+        </div>
+      )}
+
+      {/* Status pill - view mode only */}
+      {!editing && (
+        <div className="px-5 pt-3">
+          <div className="relative inline-block">
+            <select value={request.status} onChange={e => updateStatus(e.target.value)}
+              className={`appearance-none text-xs font-semibold px-3 py-1.5 rounded-full pr-7 focus:outline-none cursor-pointer ${STATUS_COLORS[request.status]}`}>
+              {STATUSES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+          </div>
+        </div>
+      )}
 
       {/* Products */}
       <div className="px-4 pt-4">

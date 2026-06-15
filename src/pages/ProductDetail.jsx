@@ -1,15 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { ChevronLeft, Camera, Trash2, Edit2, Check, X, FileDown, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Camera, Trash2, X, FileDown, ChevronDown } from 'lucide-react'
 
 const APPROVAL_STATUSES = ['In process', 'Approved']
 const EXCLUDED_EMAIL = 'mlisi@envirolite.com'
-
-const STATUS_BADGE = {
-  'In process': 'bg-yellow-100 text-yellow-700',
-  'Approved':   'bg-green-100 text-green-700',
-}
 
 function SectionPhoto({ photo, onUpload, onDelete, uploading }) {
   const ref = useRef()
@@ -38,7 +33,7 @@ function SectionPhoto({ photo, onUpload, onDelete, uploading }) {
         <button onClick={() => ref.current?.click()} disabled={uploading}
           className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-300 active:bg-gray-50 disabled:opacity-50">
           <Camera size={18} />
-          <span className="text-[9px] text-gray-400">{uploading ? '...' : 'Photo'}</span>
+          <span className="text-[9px] text-gray-400">{uploading ? '...' : 'Add Photos'}</span>
         </button>
       )}
     </div>
@@ -53,9 +48,8 @@ export default function ProductDetail() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({})
 
   async function load() {
     const [{ data: prod }, { data: fileList }, { data: userList }] = await Promise.all([
@@ -67,17 +61,21 @@ export default function ProductDetail() {
     setProduct(prod)
     setFiles(fileList || [])
     setUsers(userList || [])
-    if (prod) setEditForm({
+    if (prod) setForm({
       name: prod.name || '',
+      sku: prod.sku || '',
       pieces_per_unit: prod.pieces_per_unit ?? '',
       units_per_case: prod.units_per_case ?? '',
       cases_per_pallet: prod.cases_per_pallet ?? '',
+      weight_per_unit: prod.weight_per_unit ?? '',
+      weight_per_case: prod.weight_per_case ?? '',
       box_length_in: prod.box_length_in ?? '',
       box_width_in: prod.box_width_in ?? '',
       box_height_in: prod.box_height_in ?? '',
       box_size_status: prod.box_size_status || 'In process',
       label_verification_status: prod.label_verification_status || 'In process',
       assigned_to: prod.assigned_to || '',
+      notes: prod.notes || '',
     })
     setLoading(false)
   }
@@ -115,26 +113,29 @@ export default function ProductDetail() {
     load()
   }
 
-  async function saveEdit() {
+  async function save() {
     setSaving(true)
     const prevAssignee = product?.assigned_to || ''
-    const newAssignee  = editForm.assigned_to || ''
+    const newAssignee = form.assigned_to || ''
 
     await supabase.from('products').update({
-      name: editForm.name,
-      pieces_per_unit: editForm.pieces_per_unit || null,
-      units_per_case: editForm.units_per_case || null,
-      cases_per_pallet: editForm.cases_per_pallet || null,
-      box_length_in: editForm.box_length_in || null,
-      box_width_in: editForm.box_width_in || null,
-      box_height_in: editForm.box_height_in || null,
-      box_size_status: editForm.box_size_status,
-      label_verification_status: editForm.label_verification_status,
+      name: form.name,
+      sku: form.sku || null,
+      pieces_per_unit: form.pieces_per_unit || null,
+      units_per_case: form.units_per_case || null,
+      cases_per_pallet: form.cases_per_pallet || null,
+      weight_per_unit: form.weight_per_unit || null,
+      weight_per_case: form.weight_per_case || null,
+      box_length_in: form.box_length_in || null,
+      box_width_in: form.box_width_in || null,
+      box_height_in: form.box_height_in || null,
+      box_size_status: form.box_size_status,
+      label_verification_status: form.label_verification_status,
       assigned_to: newAssignee || null,
+      notes: form.notes || null,
       is_draft: false,
     }).eq('id', id)
 
-    // Notify new assignee if they were just assigned
     if (newAssignee && newAssignee !== prevAssignee) {
       const { data: profile } = await supabase
         .from('profiles').select('id').eq('email', newAssignee).single()
@@ -142,14 +143,13 @@ export default function ProductDetail() {
         await supabase.from('notifications').insert({
           user_id: profile.id,
           product_id: id,
-          message: `You've been assigned to "${editForm.name}" on request "${product?.requests?.title || ''}"`,
+          message: `You've been assigned to "${form.name}" on request "${product?.requests?.title || ''}"`,
           read: false,
         })
       }
     }
 
     await load()
-    setEditing(false)
     setSaving(false)
   }
 
@@ -190,16 +190,20 @@ h1{font-size:16pt;font-weight:600;margin:8pt 0 4pt}
 <div class="header"><div class="brand">ENVIROLITE</div><div class="subtitle">Portal</div></div>
 <div class="meta">${product?.requests?.companies?.name || ''} · Request: ${product?.requests?.title || ''}</div>
 <h1>${product?.name || ''}</h1>
-${product?.is_draft ? '<span class="badge badge-process">Draft</span>' : ''}
+${product?.sku ? `<div class="meta">SKU: ${product.sku}</div>` : ''}
 <div class="section"><div class="section-title">Part</div><div class="row"><span class="label">Pcs / Unit</span><span class="value">${product?.pieces_per_unit ?? '—'}</span></div></div>
 <div class="section"><div class="section-title">Parts in Box</div><div class="row"><span class="label">Units / Case</span><span class="value">${product?.units_per_case ?? '—'}</span></div></div>
 <div class="section"><div class="section-title">Palette Configuration</div><div class="row"><span class="label">Cases / Palette</span><span class="value">${product?.cases_per_pallet ?? '—'}</span></div></div>
-<div class="section"><div class="section-title">Box Size Approval</div>
+<div class="section"><div class="section-title">Weight (lbs)</div>
+<div class="row"><span class="label">Per Unit</span><span class="value">${product?.weight_per_unit ?? '—'}</span></div>
+<div class="row"><span class="label">Per Case</span><span class="value">${product?.weight_per_case ?? '—'}</span></div></div>
+<div class="section"><div class="section-title">Approval Process on Box Size</div>
 <div class="row"><span class="label">Dimensions</span><span class="value">${boxDims}</span></div>
 <div class="row"><span class="label">Status</span><span class="value"><span class="badge ${product?.box_size_status === 'Approved' ? 'badge-approved' : 'badge-process'}">${product?.box_size_status || 'In process'}</span></span></div></div>
 <div class="section"><div class="section-title">Label Verification</div>
 <div class="row"><span class="label">Status</span><span class="value"><span class="badge ${product?.label_verification_status === 'Approved' ? 'badge-approved' : 'badge-process'}">${product?.label_verification_status || 'In process'}</span></span></div></div>
 ${product?.assigned_to ? `<div class="section"><div class="section-title">Assigned To</div><div class="row"><span class="label">Employee</span><span class="value">${product.assigned_to}</span></div></div>` : ''}
+${product?.notes ? `<div class="section"><div class="section-title">Notes</div><p>${product.notes}</p></div>` : ''}
 <div class="footer">Envirolite Portal · ${new Date().toLocaleDateString()}</div>
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`)
@@ -208,54 +212,46 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
 
   const sectionClass = "bg-white rounded-2xl shadow-sm p-4"
   const labelClass = "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block"
+  const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue bg-white"
 
   if (loading) return <div className="py-20 text-center text-gray-400">Loading...</div>
   if (!product) return <div className="py-20 text-center text-gray-400">Not found</div>
 
+  const requestTitle = product.requests?.title || ''
+  const companyName = product.requests?.companies?.name || ''
+  const subtitle = [requestTitle, companyName].filter(Boolean).join(' · ')
+
   return (
     <div className="min-h-screen bg-brand-light pb-10">
       {/* Header */}
-      <div className="bg-brand-navy px-5 pt-4 pb-5">
-        <div className="flex items-center justify-between mb-3">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
-            <ChevronLeft size={16} /> Back
-          </button>
-          <div className="flex items-center gap-4">
-            <button onClick={handlePrint} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
-              <FileDown size={14} /> PDF
-            </button>
-            {!editing ? (
-              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
-                <Edit2 size={14} /> Edit
-              </button>
-            ) : (
-              <div className="flex gap-3">
-                <button onClick={() => setEditing(false)} className="text-white/50 text-sm">Cancel</button>
-                <button onClick={saveEdit} disabled={saving}
-                  className="flex items-center gap-1 text-brand-blue text-sm font-semibold disabled:opacity-50">
-                  <Check size={14} /> {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="text-brand-blue text-xs font-medium tracking-widest uppercase mb-1">
-          {product.requests?.companies?.name}
-        </div>
-        {editing ? (
-          <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-            className="w-full bg-white/10 text-white rounded-xl px-4 py-2.5 text-lg font-semibold focus:outline-none border border-white/20" />
-        ) : (
-          <div className="flex items-center gap-2">
-            <h1 className="text-white text-xl font-semibold">{product.name}</h1>
-            {product.is_draft && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white/70">Draft</span>
-            )}
-          </div>
-        )}
+      <div className="bg-brand-navy px-5 pt-4 pb-5 relative flex flex-col items-center">
+        <button onClick={() => navigate(-1)}
+          className="absolute left-4 top-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20">
+          <ArrowLeft size={18} className="text-white" />
+        </button>
+        <button onClick={handlePrint}
+          className="absolute right-4 top-4 flex items-center gap-1 text-white/70 text-sm active:opacity-70">
+          <FileDown size={16} /> PDF
+        </button>
+        <h1 className="text-white text-xl font-semibold mt-1">{product.name}</h1>
+        {subtitle && <p className="text-white/50 text-xs mt-0.5">{subtitle}</p>}
       </div>
 
       <div className="px-4 pt-4 space-y-3">
+
+        {/* Product Name */}
+        <div className={sectionClass}>
+          <label className={labelClass}>Product Name</label>
+          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder="e.g. Armboards" className={inputClass} />
+        </div>
+
+        {/* SKU */}
+        <div className={sectionClass}>
+          <label className={labelClass}>SKU / Item #</label>
+          <input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
+            placeholder="SKU or item number" className={inputClass} />
+        </div>
 
         {/* Part */}
         <div className={sectionClass}>
@@ -265,14 +261,10 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
               onUpload={f => uploadSectionPhoto(f, 'part')}
               onDelete={() => deleteSectionPhoto('part')} />
             <div className="flex-1">
-              <p className="text-xs text-gray-400 mb-1">Pcs / Unit</p>
-              {editing ? (
-                <input type="number" value={editForm.pieces_per_unit}
-                  onChange={e => setEditForm(f => ({ ...f, pieces_per_unit: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-              ) : (
-                <p className="text-base font-semibold text-brand-navy">{product.pieces_per_unit ?? '—'}</p>
-              )}
+              <p className="text-xs text-gray-400 mb-1">Pieces per unit</p>
+              <input type="number" value={form.pieces_per_unit}
+                onChange={e => setForm(f => ({ ...f, pieces_per_unit: e.target.value }))}
+                placeholder="0" className={inputClass} />
             </div>
           </div>
         </div>
@@ -285,14 +277,10 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
               onUpload={f => uploadSectionPhoto(f, 'parts_in_box')}
               onDelete={() => deleteSectionPhoto('parts_in_box')} />
             <div className="flex-1">
-              <p className="text-xs text-gray-400 mb-1">Units / Case</p>
-              {editing ? (
-                <input type="number" value={editForm.units_per_case}
-                  onChange={e => setEditForm(f => ({ ...f, units_per_case: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-              ) : (
-                <p className="text-base font-semibold text-brand-navy">{product.units_per_case ?? '—'}</p>
-              )}
+              <p className="text-xs text-gray-400 mb-1">Units per case</p>
+              <input type="number" value={form.units_per_case}
+                onChange={e => setForm(f => ({ ...f, units_per_case: e.target.value }))}
+                placeholder="0" className={inputClass} />
             </div>
           </div>
         </div>
@@ -305,59 +293,54 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
               onUpload={f => uploadSectionPhoto(f, 'palette')}
               onDelete={() => deleteSectionPhoto('palette')} />
             <div className="flex-1">
-              <p className="text-xs text-gray-400 mb-1">Cases / Palette</p>
-              {editing ? (
-                <input type="number" value={editForm.cases_per_pallet}
-                  onChange={e => setEditForm(f => ({ ...f, cases_per_pallet: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-              ) : (
-                <p className="text-base font-semibold text-brand-navy">{product.cases_per_pallet ?? '—'}</p>
-              )}
+              <p className="text-xs text-gray-400 mb-1">Cases per palette</p>
+              <input type="number" value={form.cases_per_pallet}
+                onChange={e => setForm(f => ({ ...f, cases_per_pallet: e.target.value }))}
+                placeholder="0" className={inputClass} />
             </div>
           </div>
         </div>
 
-        {/* Box Size Approval */}
+        {/* Weight */}
         <div className={sectionClass}>
-          <span className={labelClass}>Box Size Approval</span>
-          {editing ? (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                {[['box_length_in','L','Length'],['box_width_in','W','Width'],['box_height_in','H','Height']].map(([key,ph,lbl]) => (
-                  <div key={key} className="flex-1">
-                    <input type="number" step="0.01" placeholder={ph} value={editForm[key]}
-                      onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-                    <p className="text-[10px] text-gray-400 text-center mt-1">{lbl}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="relative">
-                <select value={editForm.box_size_status}
-                  onChange={e => setEditForm(f => ({ ...f, box_size_status: e.target.value }))}
-                  className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue pr-10 bg-white">
-                  {APPROVAL_STATUSES.map(s => <option key={s}>{s}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+          <span className={labelClass}>Weight (lbs)</span>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <input type="number" step="0.01" value={form.weight_per_unit}
+                onChange={e => setForm(f => ({ ...f, weight_per_unit: e.target.value }))}
+                placeholder="0.00" className={inputClass + " text-center"} />
+              <p className="text-[10px] text-gray-400 text-center mt-1">Per Unit</p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Dimensions</span>
-                <span className="text-sm font-semibold text-brand-navy">
-                  {(product.box_length_in && product.box_width_in && product.box_height_in)
-                    ? `${product.box_length_in}" × ${product.box_width_in}" × ${product.box_height_in}"` : '—'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">Status</span>
-                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_BADGE[product.box_size_status] || STATUS_BADGE['In process']}`}>
-                  {product.box_size_status || 'In process'}
-                </span>
-              </div>
+            <div className="flex-1">
+              <input type="number" step="0.01" value={form.weight_per_case}
+                onChange={e => setForm(f => ({ ...f, weight_per_case: e.target.value }))}
+                placeholder="0.00" className={inputClass + " text-center"} />
+              <p className="text-[10px] text-gray-400 text-center mt-1">Per Case</p>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Approval Process on Box Size */}
+        <div className={sectionClass}>
+          <span className={labelClass}>Approval Process on Box Size</span>
+          <div className="relative mb-3">
+            <select value={form.box_size_status}
+              onChange={e => setForm(f => ({ ...f, box_size_status: e.target.value }))}
+              className={inputClass + " appearance-none pr-10"}>
+              {APPROVAL_STATUSES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
+          <div className="flex gap-2">
+            {[['box_length_in','L','Length'],['box_width_in','W','Width'],['box_height_in','H','Height']].map(([key,ph,lbl]) => (
+              <div key={key} className="flex-1">
+                <input type="number" step="0.01" placeholder={ph} value={form[key]}
+                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+                <p className="text-[10px] text-gray-400 text-center mt-1">{lbl}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Label Verification */}
@@ -368,56 +351,50 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
               onUpload={f => uploadSectionPhoto(f, 'label_verification')}
               onDelete={() => deleteSectionPhoto('label_verification')} />
             <div className="flex-1">
-              <p className="text-xs text-gray-400 mb-1">Status</p>
-              {editing ? (
-                <div className="relative">
-                  <select value={editForm.label_verification_status}
-                    onChange={e => setEditForm(f => ({ ...f, label_verification_status: e.target.value }))}
-                    className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue pr-8 bg-white">
-                    {APPROVAL_STATUSES.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              ) : (
-                <p className="text-base font-semibold text-brand-navy">
-                  {product.label_verification_status || 'In process'}
-                </p>
-              )}
+              <div className="relative">
+                <select value={form.label_verification_status}
+                  onChange={e => setForm(f => ({ ...f, label_verification_status: e.target.value }))}
+                  className={inputClass + " appearance-none pr-10"}>
+                  {APPROVAL_STATUSES.map(s => <option key={s}>{s}</option>)}
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Assign to Employee */}
+        {/* Assign */}
         <div className={sectionClass}>
-          <span className={labelClass}>Assigned To</span>
-          {editing ? (
-            users.length > 0 ? (
-              <div className="relative">
-                <select value={editForm.assigned_to}
-                  onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}
-                  className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue pr-10 bg-white">
-                  <option value="">Unassigned</option>
-                  {users.map(u => <option key={u.id} value={u.email}>{u.email}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
-            ) : (
-              <input value={editForm.assigned_to}
-                onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}
-                placeholder="Employee email"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            )
-          ) : (
-            <p className="text-sm font-medium text-brand-navy">
-              {product.assigned_to || <span className="text-gray-400 font-normal">Unassigned</span>}
-            </p>
-          )}
+          <span className={labelClass}>Assign</span>
+          <div className="relative">
+            <select value={form.assigned_to}
+              onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}
+              className={inputClass + " appearance-none pr-10"}>
+              <option value="">Unassigned</option>
+              {users.map(u => <option key={u.id} value={u.email}>{u.email}</option>)}
+            </select>
+            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
         </div>
+
+        {/* Notes */}
+        <div className={sectionClass}>
+          <label className={labelClass}>Notes</label>
+          <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            placeholder="Add any notes or details..." rows={4}
+            className={inputClass + " resize-none"} />
+        </div>
+
+        {/* Save */}
+        <button onClick={save} disabled={saving || !form.name.trim()}
+          className="w-full bg-brand-blue text-white rounded-2xl py-4 text-base font-semibold active:opacity-80 disabled:opacity-50">
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
 
         {/* Delete */}
         <button onClick={handleDelete}
-          className="w-full flex items-center justify-center gap-2 text-red-400 text-sm py-3 active:opacity-70">
-          <Trash2 size={15} /> Delete Product
+          className="w-full text-red-400 text-sm py-3 active:opacity-70 font-medium">
+          Delete Product
         </button>
 
       </div>

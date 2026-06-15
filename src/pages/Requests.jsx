@@ -32,10 +32,10 @@ export default function Requests() {
 
   return (
     <div>
-      <div className="bg-brand-navy px-5 pt-4 pb-5 flex items-end justify-between">
-        <h1 className="text-white text-2xl font-semibold">Project Requests</h1>
+      <div className="bg-brand-navy px-5 pt-4 pb-5 relative flex items-center justify-center">
+        <h1 className="text-white text-xl font-semibold">Project Requests</h1>
         <button onClick={() => navigate('/requests/new')}
-          className="w-10 h-10 rounded-full bg-brand-blue flex items-center justify-center active:opacity-80 mb-1">
+          className="absolute right-4 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center active:opacity-80">
           <Plus size={20} className="text-white" />
         </button>
       </div>
