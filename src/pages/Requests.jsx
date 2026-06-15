@@ -33,7 +33,7 @@ export default function Requests() {
   return (
     <div>
       <div className="bg-brand-navy px-5 pt-4 pb-5 flex items-end justify-between">
-        <h1 className="text-white text-2xl font-semibold">Requests</h1>
+        <h1 className="text-white text-2xl font-semibold">Project Requests</h1>
         <button onClick={() => navigate('/requests/new')}
           className="w-10 h-10 rounded-full bg-brand-blue flex items-center justify-center active:opacity-80 mb-1">
           <Plus size={20} className="text-white" />

@@ -42,9 +42,8 @@ export default function Dashboard() {
   return (
     <div>
       {/* Header */}
-      <div className="bg-brand-navy px-5 pt-3 pb-6">
-        <p className="text-brand-blue text-xs font-medium tracking-widest uppercase mb-1">Envirolite</p>
-        <h1 className="text-white text-2xl font-semibold">Portal</h1>
+      <div className="bg-brand-navy px-5 pt-4 pb-6">
+        <img src="/envirolite-logo.svg" alt="Envirolite" className="h-8" />
       </div>
 
       {/* Stats */}

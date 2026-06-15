@@ -119,7 +119,7 @@ export default function NewRequest() {
           className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20 flex-shrink-0">
           <ArrowLeft size={18} className="text-white" />
         </button>
-        <h1 className="text-white text-xl font-semibold">New Request</h1>
+        <h1 className="text-white text-xl font-semibold">New Project Request</h1>
       </div>
 
       {/* Form */}

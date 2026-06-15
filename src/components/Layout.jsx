@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, Settings } from 'lucide-react'
+import { House, ClipboardList, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function Layout({ children }) {
@@ -40,7 +40,7 @@ export default function Layout({ children }) {
   }, [])
 
   const tabs = [
-    { to: '/', label: 'Home', icon: LayoutDashboard },
+    { to: '/', label: 'Home', icon: House },
     { to: '/requests', label: 'Requests', icon: ClipboardList },
     { to: unreadCount > 0 ? '/notifications' : '/settings', label: 'Settings', icon: Settings, badge: unreadCount },
   ]

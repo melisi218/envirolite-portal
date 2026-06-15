@@ -116,9 +116,8 @@ export default function RequestDetail() {
           </div>
         ) : (
           <>
-            <div className="text-brand-blue text-xs font-medium tracking-widest uppercase mb-1">{request.companies?.name}</div>
             <h1 className="text-white text-xl font-semibold leading-tight">{request.title}</h1>
-            {request.notes && <p className="text-white/50 text-sm mt-1">{request.notes}</p>}
+            {request.companies?.name && <p className="text-white/50 text-sm mt-0.5">{request.companies.name}</p>}
             <div className="mt-3 relative inline-block">
               <select value={request.status} onChange={e => updateStatus(e.target.value)}
                 className={`appearance-none text-xs font-semibold px-3 py-1.5 rounded-full pr-7 focus:outline-none cursor-pointer ${STATUS_COLORS[request.status]}`}>
