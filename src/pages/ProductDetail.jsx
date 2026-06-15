@@ -229,15 +229,19 @@ ${product?.notes ? `<div class="section"><div class="section-title">Notes</div><
           className="absolute left-4 top-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20">
           <ArrowLeft size={18} className="text-white" />
         </button>
-        <button onClick={handlePrint}
-          className="absolute right-4 top-4 flex items-center gap-1 text-white/70 text-sm active:opacity-70">
-          <FileDown size={16} /> PDF
-        </button>
         <h1 className="text-white text-xl font-semibold mt-1">{product.name}</h1>
         {subtitle && <p className="text-white/50 text-xs mt-0.5">{subtitle}</p>}
       </div>
 
-      <div className="px-4 pt-4 space-y-3">
+      {/* PDF button below header */}
+      <div className="flex justify-end px-4 pt-3 pb-1">
+        <button onClick={handlePrint}
+          className="flex items-center gap-1.5 text-gray-400 text-sm active:opacity-70">
+          <FileDown size={16} /> PDF
+        </button>
+      </div>
+
+      <div className="px-4 pt-1 space-y-3">
 
         {/* Product Name */}
         <div className={sectionClass}>

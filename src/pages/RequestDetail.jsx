@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { ArrowLeft, ChevronRight, ChevronDown, Edit2 } from 'lucide-react'
+import { ArrowLeft, ChevronRight, ChevronDown, Edit2, Plus, X, Trash2 } from 'lucide-react'
 
 const STATUS_COLORS = {
   'In Progress': 'bg-blue-100 text-blue-600',
@@ -29,6 +29,10 @@ export default function RequestDetail() {
   const [notes, setNotes] = useState('')
   const [notesDirty, setNotesDirty] = useState(false)
   const [notesSaving, setNotesSaving] = useState(false)
+
+  // Photos
+  const [uploading, setUploading] = useState(false)
+  const photoInputRef = useRef()
 
   async function load() {
     const [{ data: req }, { data: prods }, { data: cos }, { data: reqFiles }] = await Promise.all([
@@ -79,6 +83,55 @@ export default function RequestDetail() {
     setEditing(false)
   }
 
+  async function uploadPhoto(file) {
+    setUploading(true)
+    const path = `requests/${id}/${Date.now()}_${file.name}`
+    const { data: upload, error } = await supabase.storage.from('request-files').upload(path, file)
+    if (!error && upload) {
+      await supabase.from('request_files').insert({
+        request_id: id,
+        file_name: file.name,
+        file_path: upload.path,
+        mime_type: file.type,
+        size_bytes: file.size,
+      })
+    }
+    setUploading(false)
+    load()
+  }
+
+  async function deletePhoto(photo) {
+    await supabase.storage.from('request-files').remove([photo.file_path])
+    await supabase.from('request_files').delete().eq('id', photo.id)
+    load()
+  }
+
+  async function handleDeleteRequest() {
+    if (!window.confirm('Delete this project? All products and photos will also be deleted.')) return
+    // Delete product files from storage
+    const { data: prodFiles } = await supabase.from('product_files')
+      .select('file_path').eq('product_id', id) // note: we need product ids first
+    const { data: prods } = await supabase.from('products').select('id').eq('request_id', id)
+    if (prods?.length) {
+      const prodIds = prods.map(p => p.id)
+      const { data: pFiles } = await supabase.from('product_files').select('file_path').in('product_id', prodIds)
+      if (pFiles?.length) {
+        await supabase.storage.from('product-files').remove(pFiles.map(f => f.file_path))
+      }
+      await supabase.from('notifications').delete().in('product_id', prodIds)
+      await supabase.from('product_files').delete().in('product_id', prodIds)
+      await supabase.from('products').delete().eq('request_id', id)
+    }
+    // Delete request files
+    const { data: rFiles } = await supabase.from('request_files').select('file_path').eq('request_id', id)
+    if (rFiles?.length) {
+      await supabase.storage.from('request-files').remove(rFiles.map(f => f.file_path))
+    }
+    await supabase.from('request_files').delete().eq('request_id', id)
+    await supabase.from('requests').delete().eq('id', id)
+    navigate('/requests')
+  }
+
   async function saveNotes() {
     setNotesSaving(true)
     await supabase.from('requests').update({ notes }).eq('id', id)
@@ -99,15 +152,7 @@ export default function RequestDetail() {
           <ArrowLeft size={18} className="text-white" />
         </button>
 
-        {editing ? (
-          <div className="absolute right-4 top-4 flex items-center gap-3">
-            <button onClick={cancelEdit} className="text-white/50 text-sm">Cancel</button>
-            <button onClick={saveEdit} disabled={saving}
-              className="text-brand-blue text-sm font-semibold disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        ) : (
+        {!editing && (
           <button onClick={() => setEditing(true)}
             className="absolute right-4 top-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20">
             <Edit2 size={16} className="text-white" />
@@ -117,6 +162,16 @@ export default function RequestDetail() {
         <h1 className="text-white text-xl font-semibold mt-1 text-center">{request.title}</h1>
         {request.companies?.name && (
           <p className="text-white/50 text-sm mt-0.5">{request.companies.name}</p>
+        )}
+
+        {editing && (
+          <div className="flex items-center gap-4 mt-3">
+            <button onClick={cancelEdit} className="text-white/50 text-sm px-4 py-1.5">Cancel</button>
+            <button onClick={saveEdit} disabled={saving}
+              className="text-brand-blue text-sm font-semibold px-4 py-1.5 disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -164,18 +219,29 @@ export default function RequestDetail() {
         </div>
 
         {/* Photos */}
-        {photos.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-3">Photos</span>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              {photos.map(p => (
-                <img key={p.id} src={p.url} alt=""
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-3">Photos</span>
+          <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={e => { Array.from(e.target.files).forEach(uploadPhoto); e.target.value = '' }} />
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {photos.map(p => (
+              <div key={p.id} className="relative flex-shrink-0">
+                <img src={p.url} alt=""
                   onClick={() => window.open(p.url, '_blank')}
-                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0 cursor-pointer border border-gray-100" />
-              ))}
-            </div>
+                  className="w-16 h-16 rounded-xl object-cover cursor-pointer border border-gray-100" />
+                <button onClick={() => deletePhoto(p)}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
+                  <X size={10} className="text-white" />
+                </button>
+              </div>
+            ))}
+            <button onClick={() => photoInputRef.current?.click()} disabled={uploading}
+              className="w-16 h-16 flex-shrink-0 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-300 active:bg-gray-50 disabled:opacity-50">
+              <Plus size={18} />
+              <span className="text-[9px] mt-0.5">{uploading ? '...' : 'Add'}</span>
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Products */}
         <div>
@@ -219,6 +285,12 @@ export default function RequestDetail() {
             </div>
           )}
         </div>
+
+        {/* Delete project */}
+        <button onClick={handleDeleteRequest}
+          className="w-full flex items-center justify-center gap-2 text-red-400 text-sm py-3 active:opacity-70 font-medium">
+          <Trash2 size={15} /> Delete Project
+        </button>
 
       </div>
     </div>
