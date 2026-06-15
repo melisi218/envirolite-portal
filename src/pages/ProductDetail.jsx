@@ -7,8 +7,8 @@ const APPROVAL_STATUSES = ['In process', 'Approved']
 const EXCLUDED_EMAIL = 'mlisi@envirolite.com'
 
 const STATUS_BADGE = {
-  'In process': 'bg-yellow-100 text-yellow-600',
-  'Approved': 'bg-green-100 text-green-600',
+  'In process': 'bg-yellow-100 text-yellow-700',
+  'Approved':   'bg-green-100 text-green-700',
 }
 
 function SectionPhoto({ photo, onUpload, onDelete, uploading }) {
@@ -22,22 +22,23 @@ function SectionPhoto({ photo, onUpload, onDelete, uploading }) {
   }, [photo])
 
   return (
-    <div>
+    <div className="flex-shrink-0 w-20">
       <input ref={ref} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={e => { if (e.target.files[0]) onUpload(e.target.files[0]); e.target.value = '' }} />
       {url ? (
-        <div className="relative">
-          <img src={url} alt="" className="w-full h-40 object-cover rounded-xl border border-gray-100" onClick={() => window.open(url, '_blank')} />
+        <div className="relative w-20 h-20">
+          <img src={url} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-100 cursor-pointer"
+            onClick={() => window.open(url, '_blank')} />
           <button onClick={e => { e.stopPropagation(); onDelete() }}
-            className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center">
-            <X size={13} className="text-white" />
+            className="absolute -top-1 -right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
+            <X size={10} className="text-white" />
           </button>
         </div>
       ) : (
         <button onClick={() => ref.current?.click()} disabled={uploading}
-          className="w-full h-32 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-300 active:bg-gray-50 disabled:opacity-50">
-          <Camera size={22} />
-          <span className="text-xs text-gray-400">{uploading ? 'Uploading...' : 'Tap to add photo'}</span>
+          className="w-20 h-20 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-300 active:bg-gray-50 disabled:opacity-50">
+          <Camera size={18} />
+          <span className="text-[9px] text-gray-400">{uploading ? '...' : 'Photo'}</span>
         </button>
       )}
     </div>
@@ -60,7 +61,8 @@ export default function ProductDetail() {
     const [{ data: prod }, { data: fileList }, { data: userList }] = await Promise.all([
       supabase.from('products').select('*, requests(id, title, companies(name))').eq('id', id).single(),
       supabase.from('product_files').select('*').eq('product_id', id).order('uploaded_at', { ascending: false }),
-      supabase.from('profiles').select('id, email').neq('email', EXCLUDED_EMAIL).order('email').then(r => r),
+      supabase.from('profiles').select('id, email').neq('email', EXCLUDED_EMAIL).order('email')
+        .then(r => r).catch(() => ({ data: [] })),
     ])
     setProduct(prod)
     setFiles(fileList || [])
@@ -115,6 +117,9 @@ export default function ProductDetail() {
 
   async function saveEdit() {
     setSaving(true)
+    const prevAssignee = product?.assigned_to || ''
+    const newAssignee  = editForm.assigned_to || ''
+
     await supabase.from('products').update({
       name: editForm.name,
       pieces_per_unit: editForm.pieces_per_unit || null,
@@ -125,9 +130,24 @@ export default function ProductDetail() {
       box_height_in: editForm.box_height_in || null,
       box_size_status: editForm.box_size_status,
       label_verification_status: editForm.label_verification_status,
-      assigned_to: editForm.assigned_to || null,
+      assigned_to: newAssignee || null,
       is_draft: false,
     }).eq('id', id)
+
+    // Notify new assignee if they were just assigned
+    if (newAssignee && newAssignee !== prevAssignee) {
+      const { data: profile } = await supabase
+        .from('profiles').select('id').eq('email', newAssignee).single()
+      if (profile) {
+        await supabase.from('notifications').insert({
+          user_id: profile.id,
+          product_id: id,
+          message: `You've been assigned to "${editForm.name}" on request "${product?.requests?.title || ''}"`,
+          read: false,
+        })
+      }
+    }
+
     await load()
     setEditing(false)
     setSaving(false)
@@ -135,6 +155,7 @@ export default function ProductDetail() {
 
   async function handleDelete() {
     if (!window.confirm('Delete this product? This cannot be undone.')) return
+    await supabase.from('notifications').delete().eq('product_id', id)
     await supabase.from('product_files').delete().eq('product_id', id)
     await supabase.from('products').delete().eq('id', id)
     navigate(-1)
@@ -160,7 +181,7 @@ h1{font-size:16pt;font-weight:600;margin:8pt 0 4pt}
 .section-title{font-size:8pt;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#003366;border-bottom:1px solid #eee;padding-bottom:4pt;margin-bottom:8pt}
 .row{display:flex;justify-content:space-between;padding:4pt 0;border-bottom:1px solid #f5f5f5}
 .label{color:#666;font-size:10pt}
-.value{font-weight:500;font-size:10pt}
+.value{font-weight:600;font-size:10pt}
 .badge{display:inline-block;padding:2pt 8pt;border-radius:20pt;font-size:8pt;font-weight:600}
 .badge-process{background:#FEF9C3;color:#854D0E}
 .badge-approved{background:#DCFCE7;color:#166534}
@@ -185,8 +206,8 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
     pw.document.close()
   }
 
-  const sectionClass = "bg-white rounded-2xl shadow-sm p-4 space-y-3"
-  const labelClass = "text-xs font-semibold text-gray-500 uppercase tracking-wide"
+  const sectionClass = "bg-white rounded-2xl shadow-sm p-4"
+  const labelClass = "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block"
 
   if (loading) return <div className="py-20 text-center text-gray-400">Loading...</div>
   if (!product) return <div className="py-20 text-center text-gray-400">Not found</div>
@@ -199,14 +220,12 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
             <ChevronLeft size={16} /> Back
           </button>
-          <div className="flex items-center gap-3">
-            <button onClick={handlePrint}
-              className="flex items-center gap-1.5 text-brand-blue text-sm active:opacity-70">
+          <div className="flex items-center gap-4">
+            <button onClick={handlePrint} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
               <FileDown size={14} /> PDF
             </button>
             {!editing ? (
-              <button onClick={() => setEditing(true)}
-                className="flex items-center gap-1.5 text-brand-blue text-sm active:opacity-70">
+              <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-brand-blue text-sm active:opacity-70">
                 <Edit2 size={14} /> Edit
               </button>
             ) : (
@@ -225,7 +244,7 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
         </div>
         {editing ? (
           <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-            className="w-full bg-white/10 text-white placeholder-white/40 rounded-xl px-4 py-2.5 text-lg font-semibold focus:outline-none border border-white/20" />
+            className="w-full bg-white/10 text-white rounded-xl px-4 py-2.5 text-lg font-semibold focus:outline-none border border-white/20" />
         ) : (
           <div className="flex items-center gap-2">
             <h1 className="text-white text-xl font-semibold">{product.name}</h1>
@@ -236,72 +255,77 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
         )}
       </div>
 
-      <div className="px-4 pt-4 space-y-4">
+      <div className="px-4 pt-4 space-y-3">
 
         {/* Part */}
         <div className={sectionClass}>
-          <label className={labelClass}>Part</label>
-          <SectionPhoto photo={photoBySection('part')} uploading={uploading}
-            onUpload={f => uploadSectionPhoto(f, 'part')}
-            onDelete={() => deleteSectionPhoto('part')} />
-          <div>
-            <label className="text-xs text-gray-400">Pcs / Unit</label>
-            {editing ? (
-              <input type="number" value={editForm.pieces_per_unit}
-                onChange={e => setEditForm(f => ({ ...f, pieces_per_unit: e.target.value }))}
-                className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            ) : (
-              <div className="text-base font-medium text-brand-navy mt-1">{product.pieces_per_unit ?? '—'}</div>
-            )}
+          <span className={labelClass}>Part</span>
+          <div className="flex items-start gap-4">
+            <SectionPhoto photo={photoBySection('part')} uploading={uploading}
+              onUpload={f => uploadSectionPhoto(f, 'part')}
+              onDelete={() => deleteSectionPhoto('part')} />
+            <div className="flex-1">
+              <p className="text-xs text-gray-400 mb-1">Pcs / Unit</p>
+              {editing ? (
+                <input type="number" value={editForm.pieces_per_unit}
+                  onChange={e => setEditForm(f => ({ ...f, pieces_per_unit: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+              ) : (
+                <p className="text-base font-semibold text-brand-navy">{product.pieces_per_unit ?? '—'}</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Parts in Box */}
         <div className={sectionClass}>
-          <label className={labelClass}>Parts in Box</label>
-          <SectionPhoto photo={photoBySection('parts_in_box')} uploading={uploading}
-            onUpload={f => uploadSectionPhoto(f, 'parts_in_box')}
-            onDelete={() => deleteSectionPhoto('parts_in_box')} />
-          <div>
-            <label className="text-xs text-gray-400">Units / Case</label>
-            {editing ? (
-              <input type="number" value={editForm.units_per_case}
-                onChange={e => setEditForm(f => ({ ...f, units_per_case: e.target.value }))}
-                className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            ) : (
-              <div className="text-base font-medium text-brand-navy mt-1">{product.units_per_case ?? '—'}</div>
-            )}
+          <span className={labelClass}>Parts in Box</span>
+          <div className="flex items-start gap-4">
+            <SectionPhoto photo={photoBySection('parts_in_box')} uploading={uploading}
+              onUpload={f => uploadSectionPhoto(f, 'parts_in_box')}
+              onDelete={() => deleteSectionPhoto('parts_in_box')} />
+            <div className="flex-1">
+              <p className="text-xs text-gray-400 mb-1">Units / Case</p>
+              {editing ? (
+                <input type="number" value={editForm.units_per_case}
+                  onChange={e => setEditForm(f => ({ ...f, units_per_case: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+              ) : (
+                <p className="text-base font-semibold text-brand-navy">{product.units_per_case ?? '—'}</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Palette Configuration */}
         <div className={sectionClass}>
-          <label className={labelClass}>Palette Configuration</label>
-          <SectionPhoto photo={photoBySection('palette')} uploading={uploading}
-            onUpload={f => uploadSectionPhoto(f, 'palette')}
-            onDelete={() => deleteSectionPhoto('palette')} />
-          <div>
-            <label className="text-xs text-gray-400">Cases / Palette</label>
-            {editing ? (
-              <input type="number" value={editForm.cases_per_pallet}
-                onChange={e => setEditForm(f => ({ ...f, cases_per_pallet: e.target.value }))}
-                className="w-full mt-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            ) : (
-              <div className="text-base font-medium text-brand-navy mt-1">{product.cases_per_pallet ?? '—'}</div>
-            )}
+          <span className={labelClass}>Palette Configuration</span>
+          <div className="flex items-start gap-4">
+            <SectionPhoto photo={photoBySection('palette')} uploading={uploading}
+              onUpload={f => uploadSectionPhoto(f, 'palette')}
+              onDelete={() => deleteSectionPhoto('palette')} />
+            <div className="flex-1">
+              <p className="text-xs text-gray-400 mb-1">Cases / Palette</p>
+              {editing ? (
+                <input type="number" value={editForm.cases_per_pallet}
+                  onChange={e => setEditForm(f => ({ ...f, cases_per_pallet: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+              ) : (
+                <p className="text-base font-semibold text-brand-navy">{product.cases_per_pallet ?? '—'}</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Box Size Approval */}
         <div className={sectionClass}>
-          <label className={labelClass}>Box Size Approval</label>
+          <span className={labelClass}>Box Size Approval</span>
           {editing ? (
-            <>
-              <div className="flex items-center gap-2">
-                {[['box_length_in', 'L', 'Length'], ['box_width_in', 'W', 'Width'], ['box_height_in', 'H', 'Height']].map(([key, ph, lbl]) => (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {[['box_length_in','L','Length'],['box_width_in','W','Width'],['box_height_in','H','Height']].map(([key,ph,lbl]) => (
                   <div key={key} className="flex-1">
-                    <input type="number" step="0.01" placeholder={ph}
-                      value={editForm[key]}
+                    <input type="number" step="0.01" placeholder={ph} value={editForm[key]}
                       onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
                       className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
                     <p className="text-[10px] text-gray-400 text-center mt-1">{lbl}</p>
@@ -316,58 +340,59 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
-            </>
+            </div>
           ) : (
-            <>
-              <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Dimensions</span>
-                <span className="text-sm font-medium text-brand-navy">
+                <span className="text-sm font-semibold text-brand-navy">
                   {(product.box_length_in && product.box_width_in && product.box_height_in)
-                    ? `${product.box_length_in}" × ${product.box_width_in}" × ${product.box_height_in}"`
-                    : '—'}
+                    ? `${product.box_length_in}" × ${product.box_width_in}" × ${product.box_height_in}"` : '—'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Status</span>
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_BADGE[product.box_size_status] || STATUS_BADGE['In process']}`}>
                   {product.box_size_status || 'In process'}
                 </span>
               </div>
-            </>
+            </div>
           )}
         </div>
 
         {/* Label Verification */}
         <div className={sectionClass}>
-          <label className={labelClass}>Label Verification</label>
-          <SectionPhoto photo={photoBySection('label_verification')} uploading={uploading}
-            onUpload={f => uploadSectionPhoto(f, 'label_verification')}
-            onDelete={() => deleteSectionPhoto('label_verification')} />
-          {editing ? (
-            <div className="relative">
-              <select value={editForm.label_verification_status}
-                onChange={e => setEditForm(f => ({ ...f, label_verification_status: e.target.value }))}
-                className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue pr-10 bg-white">
-                {APPROVAL_STATUSES.map(s => <option key={s}>{s}</option>)}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <span className={labelClass}>Label Verification</span>
+          <div className="flex items-start gap-4">
+            <SectionPhoto photo={photoBySection('label_verification')} uploading={uploading}
+              onUpload={f => uploadSectionPhoto(f, 'label_verification')}
+              onDelete={() => deleteSectionPhoto('label_verification')} />
+            <div className="flex-1">
+              <p className="text-xs text-gray-400 mb-1">Status</p>
+              {editing ? (
+                <div className="relative">
+                  <select value={editForm.label_verification_status}
+                    onChange={e => setEditForm(f => ({ ...f, label_verification_status: e.target.value }))}
+                    className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue pr-8 bg-white">
+                    {APPROVAL_STATUSES.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              ) : (
+                <p className="text-base font-semibold text-brand-navy">
+                  {product.label_verification_status || 'In process'}
+                </p>
+              )}
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Status</span>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_BADGE[product.label_verification_status] || STATUS_BADGE['In process']}`}>
-                {product.label_verification_status || 'In process'}
-              </span>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Assign to Employee */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <label className={labelClass}>Assigned To</label>
+        <div className={sectionClass}>
+          <span className={labelClass}>Assigned To</span>
           {editing ? (
             users.length > 0 ? (
-              <div className="relative mt-2">
+              <div className="relative">
                 <select value={editForm.assigned_to}
                   onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}
                   className="w-full appearance-none border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue pr-10 bg-white">
@@ -380,12 +405,12 @@ ${product?.assigned_to ? `<div class="section"><div class="section-title">Assign
               <input value={editForm.assigned_to}
                 onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}
                 placeholder="Employee email"
-                className="w-full mt-2 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue" />
             )
           ) : (
-            <div className="text-sm font-medium text-brand-navy mt-1">
-              {product.assigned_to || <span className="text-gray-400">Unassigned</span>}
-            </div>
+            <p className="text-sm font-medium text-brand-navy">
+              {product.assigned_to || <span className="text-gray-400 font-normal">Unassigned</span>}
+            </p>
           )}
         </div>
 

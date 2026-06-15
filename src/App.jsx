@@ -14,6 +14,7 @@ import Products from './pages/Products'
 import NewProduct from './pages/NewProduct'
 import ProductDetail from './pages/ProductDetail'
 import Settings from './pages/Settings'
+import Notifications from './pages/Notifications'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = still loading
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/products/new" element={<NewProduct />} />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Routes>
       </Layout>
     </BrowserRouter>

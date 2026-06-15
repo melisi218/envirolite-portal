@@ -1,28 +1,62 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, ClipboardList, Settings } from 'lucide-react'
-
-const tabs = [
-  { to: '/', label: 'Home', icon: LayoutDashboard },
-  { to: '/requests', label: 'Requests', icon: ClipboardList },
-  { to: '/settings', label: 'Settings', icon: Settings },
-]
+import { supabase } from '../lib/supabase'
 
 export default function Layout({ children }) {
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    let channel
+
+    async function loadUnread() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false)
+
+      setUnreadCount(count || 0)
+
+      // Realtime: listen for new notifications for this user
+      channel = supabase
+        .channel('notifications')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        }, () => {
+          setUnreadCount(c => c + 1)
+        })
+        .subscribe()
+    }
+
+    loadUnread()
+    return () => { if (channel) supabase.removeChannel(channel) }
+  }, [])
+
+  const tabs = [
+    { to: '/', label: 'Home', icon: LayoutDashboard },
+    { to: '/requests', label: 'Requests', icon: ClipboardList },
+    { to: unreadCount > 0 ? '/notifications' : '/settings', label: 'Settings', icon: Settings, badge: unreadCount },
+  ]
+
   return (
     <div className="flex flex-col min-h-screen bg-brand-light">
-      {/* Status bar spacer — min 44px (notch iPhones) or 59px (Dynamic Island), falls back to safe-area-inset-top in PWA */}
       <div className="bg-brand-navy" style={{ height: 'max(env(safe-area-inset-top), 44px)' }} />
 
-      {/* Page content */}
       <div className="flex-1 pb-tab scroll-native">
         {children}
       </div>
 
-      {/* Bottom Tab Bar */}
       <div className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex">
-          {tabs.map(({ to, label, icon: Icon }) => (
+          {tabs.map(({ to, label, icon: Icon, badge }) => (
             <NavLink
               key={to}
               to={to}
@@ -35,7 +69,14 @@ export default function Layout({ children }) {
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                  <div className="relative">
+                    <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                    {badge > 0 && (
+                      <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                        {badge > 9 ? '9+' : badge}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] font-medium">{label}</span>
                 </>
               )}
