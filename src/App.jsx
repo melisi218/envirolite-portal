@@ -11,6 +11,7 @@ import Requests from './pages/Requests'
 import NewRequest from './pages/NewRequest'
 import RequestDetail from './pages/RequestDetail'
 import Products from './pages/Products'
+import NewProduct from './pages/NewProduct'
 import ProductDetail from './pages/ProductDetail'
 import Settings from './pages/Settings'
 
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/requests/new" element={<NewRequest />} />
           <Route path="/requests/:id" element={<RequestDetail />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/new" element={<NewProduct />} />
           <Route path="/products/:id" element={<ProductDetail />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

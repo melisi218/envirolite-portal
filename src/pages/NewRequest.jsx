@@ -12,8 +12,6 @@ export default function NewRequest() {
   const [companies, setCompanies] = useState([])
   const [form, setForm] = useState({
     company_id: '', title: '', notes: '', status: 'In Progress',
-    case_length: '', case_width: '', case_depth: '',
-    qty_per_case: '', qty_per_skid: '',
   })
   const [photos, setPhotos] = useState([]) // [{ file, preview, note }]
   const [saving, setSaving] = useState(false)
@@ -83,11 +81,6 @@ export default function NewRequest() {
         title: form.title,
         notes: form.notes,
         status: form.status,
-        case_length: form.case_length || null,
-        case_width: form.case_width || null,
-        case_depth: form.case_depth || null,
-        qty_per_case: form.qty_per_case || null,
-        qty_per_skid: form.qty_per_skid || null,
       })
       .select()
       .single()
@@ -148,7 +141,7 @@ export default function NewRequest() {
 
         {/* Title */}
         <div className="bg-white rounded-2xl shadow-sm p-4">
-          <label className={labelClass}>Title / Product</label>
+          <label className={labelClass}>Project Name</label>
           <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             placeholder="e.g. Q3 Packaging Redesign"
             className={inputClass} />
@@ -160,51 +153,6 @@ export default function NewRequest() {
           <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             placeholder="Add any details or notes..."
             rows={4} className={`${inputClass} resize-none`} />
-        </div>
-
-        {/* Case Dimensions */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <label className={labelClass}>Case Dimensions (in)</label>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex-1">
-              <input type="number" inputMode="decimal" placeholder="L"
-                value={form.case_length} onChange={e => setForm(f => ({ ...f, case_length: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-              <p className="text-xs text-gray-400 text-center mt-1">Length</p>
-            </div>
-            <span className="text-gray-300 text-xl font-light pb-5">×</span>
-            <div className="flex-1">
-              <input type="number" inputMode="decimal" placeholder="W"
-                value={form.case_width} onChange={e => setForm(f => ({ ...f, case_width: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-              <p className="text-xs text-gray-400 text-center mt-1">Width</p>
-            </div>
-            <span className="text-gray-300 text-xl font-light pb-5">×</span>
-            <div className="flex-1">
-              <input type="number" inputMode="decimal" placeholder="D"
-                value={form.case_depth} onChange={e => setForm(f => ({ ...f, case_depth: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-              <p className="text-xs text-gray-400 text-center mt-1">Depth</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Qty per Case & Qty per Skid */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Qty per Case</label>
-              <input type="number" inputMode="numeric" placeholder="0"
-                value={form.qty_per_case} onChange={e => setForm(f => ({ ...f, qty_per_case: e.target.value }))}
-                className="w-full mt-2 border border-gray-200 rounded-xl px-4 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            </div>
-            <div>
-              <label className={labelClass}>Qty per Skid</label>
-              <input type="number" inputMode="numeric" placeholder="0"
-                value={form.qty_per_skid} onChange={e => setForm(f => ({ ...f, qty_per_skid: e.target.value }))}
-                className="w-full mt-2 border border-gray-200 rounded-xl px-4 py-3 text-base text-center focus:outline-none focus:ring-2 focus:ring-brand-blue" />
-            </div>
-          </div>
         </div>
 
         {/* Photos */}
