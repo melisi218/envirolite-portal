@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 
 const STATUS_COLORS = {
   'In Progress': 'bg-blue-100 text-blue-600',
@@ -11,7 +11,7 @@ const STATUS_COLORS = {
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ companies: 0, requests: 0, products: 0 })
+  const navigate = useNavigate()
   const [requests, setRequests] = useState([])
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,14 +19,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const [{ count: c }, { count: r }, { count: p }, { data: reqs }, { data: cos }] = await Promise.all([
-        supabase.from('companies').select('*', { count: 'exact', head: true }),
-        supabase.from('requests').select('*', { count: 'exact', head: true }),
-        supabase.from('products').select('*', { count: 'exact', head: true }),
+      const [{ data: reqs }, { data: cos }] = await Promise.all([
         supabase.from('requests').select('*, companies(name)').order('created_at', { ascending: true }),
         supabase.from('companies').select('id, name').order('name'),
       ])
-      setStats({ companies: c || 0, requests: r || 0, products: p || 0 })
       setRequests(reqs || [])
       setCompanies(cos || [])
       setLoading(false)
@@ -46,21 +42,6 @@ export default function Dashboard() {
         <img src="/envirolite-logo.svg" alt="Envirolite" className="h-8" />
       </div>
 
-      {/* Stats */}
-      <div className="px-4 -mt-3">
-        <div className="bg-white rounded-2xl shadow-sm p-4 grid grid-cols-3 divide-x divide-gray-100">
-          {[
-            { label: 'New Requests', value: stats.companies },
-            { label: 'In-Progress', value: stats.requests },
-            { label: 'Products', value: stats.products },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex flex-col items-center py-1">
-              <div className="text-2xl font-semibold text-brand-navy">{loading ? '—' : value}</div>
-              <div className="text-xs text-gray-400 mt-0.5">{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Recent Requests */}
       <div className="mt-5">
@@ -122,6 +103,17 @@ export default function Dashboard() {
               ))
             )}
           </div>
+        </div>
+
+        {/* Add New Project button */}
+        <div className="px-4 mt-3">
+          <button
+            onClick={() => navigate('/requests/new')}
+            className="w-full flex items-center justify-center gap-2 bg-brand-navy text-white rounded-2xl py-3.5 text-sm font-semibold active:opacity-80"
+          >
+            <Plus size={16} />
+            Add New Project
+          </button>
         </div>
       </div>
       <div className="h-6" />

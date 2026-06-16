@@ -15,6 +15,8 @@ export default function NewRequest() {
   })
   const [photos, setPhotos] = useState([]) // [{ file, preview, note }]
   const [saving, setSaving] = useState(false)
+  const [savedRequestId, setSavedRequestId] = useState(null)
+  const [productError, setProductError] = useState('')
 
   // Add new company sheet
   const [showAddCompany, setShowAddCompany] = useState(false)
@@ -69,12 +71,8 @@ export default function NewRequest() {
     setPhotos(p => p.map((ph, i) => i === index ? { ...ph, note } : ph))
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setSaving(true)
-
-    // Insert request
-    const { data: req, error } = await supabase
+  async function saveRequest() {
+    const { data: req } = await supabase
       .from('requests')
       .insert({
         company_id: form.company_id,
@@ -86,13 +84,11 @@ export default function NewRequest() {
       .single()
 
     if (req && photos.length > 0) {
-      // Upload each photo to Supabase Storage
       for (const photo of photos) {
         const path = `requests/${req.id}/${Date.now()}_${photo.file.name}`
         const { data: upload } = await supabase.storage
           .from('request-files')
           .upload(path, photo.file)
-
         if (upload) {
           await supabase.from('request_files').insert({
             request_id: req.id,
@@ -103,7 +99,32 @@ export default function NewRequest() {
         }
       }
     }
+    return req
+  }
 
+  async function handleAddProduct() {
+    setProductError('')
+    if (!form.company_id || !form.title.trim()) {
+      setProductError('Fill in Company and Project Name first.')
+      return
+    }
+    setSaving(true)
+    const req = savedRequestId ? { id: savedRequestId } : await saveRequest()
+    if (req) {
+      setSavedRequestId(req.id)
+      navigate(`/requests/${req.id}/products/new`)
+    }
+    setSaving(false)
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (savedRequestId) {
+      navigate('/requests')
+      return
+    }
+    setSaving(true)
+    await saveRequest()
     setSaving(false)
     navigate('/requests')
   }
@@ -190,6 +211,16 @@ export default function NewRequest() {
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" multiple
             className="hidden" onChange={handlePhotoSelect} />
+        </div>
+
+        {/* Add Products */}
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <label className={labelClass}>Add Products</label>
+          {productError && <p className="text-red-400 text-xs mt-1">{productError}</p>}
+          <button type="button" onClick={handleAddProduct} disabled={saving}
+            className="mt-3 w-full border-2 border-dashed border-gray-200 rounded-xl py-4 flex items-center justify-center text-gray-400 text-sm active:bg-gray-50 disabled:opacity-50">
+            + New Product
+          </button>
         </div>
 
         {/* Status */}
