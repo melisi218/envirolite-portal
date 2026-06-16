@@ -250,7 +250,7 @@ export default function NewRequest() {
             placeholder="e.g. Cardinal Health"
             className={inputClass} />
           <button type="submit" disabled={addingCompany}
-            className="w-full mt-4 bg-brand-blue text-white rounded-xl py-3.5 text-base font-semibold active:opacity-80 disabled:opacity-50">
+            className="w-full mt-4 bg-brand-blue text-white rounded-2xl py-4 text-base font-semibold active:opacity-80 disabled:opacity-50">
             {addingCompany ? 'Adding...' : 'Add Company'}
           </button>
         </form>

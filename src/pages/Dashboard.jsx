@@ -46,7 +46,7 @@ export default function Dashboard() {
       {/* Recent Requests */}
       <div className="mt-5">
         <div className="flex items-center justify-between mb-3 px-4">
-          <h2 className="text-sm font-semibold text-brand-navy uppercase tracking-wide">Recent Requests</h2>
+          <h2 className="text-sm font-semibold text-brand-navy uppercase tracking-wide">Open Projects</h2>
           <Link to="/requests" className="text-brand-blue text-sm">See all</Link>
         </div>
 
@@ -109,7 +109,7 @@ export default function Dashboard() {
         <div className="px-4 mt-3">
           <button
             onClick={() => navigate('/requests/new')}
-            className="w-full flex items-center justify-center gap-2 bg-brand-navy text-white rounded-2xl py-3.5 text-sm font-semibold active:opacity-80"
+            className="w-full flex items-center justify-center gap-2 bg-brand-blue text-white rounded-2xl py-4 text-base font-semibold active:opacity-80"
           >
             <Plus size={16} />
             Add New Project

@@ -212,7 +212,7 @@ export default function RequestDetail() {
           />
           {notesDirty && (
             <button onClick={saveNotes} disabled={notesSaving}
-              className="w-full mt-2 bg-brand-blue text-white rounded-xl py-2.5 text-sm font-semibold active:opacity-80 disabled:opacity-50">
+              className="w-full mt-2 bg-brand-blue text-white rounded-2xl py-4 text-base font-semibold active:opacity-80 disabled:opacity-50">
               {notesSaving ? 'Saving...' : 'Save Changes'}
             </button>
           )}

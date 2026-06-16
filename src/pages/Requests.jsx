@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, Plus, ChevronDown, Check } from 'lucide-react'
 
 const STATUS_COLORS = {
   'In Progress': 'bg-blue-100 text-blue-600',
@@ -15,20 +15,49 @@ const FILTERS = ['All', 'In Progress', 'On Hold', 'Completed', 'Cancelled']
 export default function Requests() {
   const navigate = useNavigate()
   const [requests, setRequests] = useState([])
+  const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('All')
+  const [selectedBuyers, setSelectedBuyers] = useState([]) // array of company ids
+  const [buyerOpen, setBuyerOpen] = useState(false)
+  const buyerRef = useRef()
 
   async function load() {
-    const { data } = await supabase.from('requests').select('*, companies(name)').order('created_at', { ascending: true })
-    setRequests(data || [])
+    const [{ data: reqs }, { data: cos }] = await Promise.all([
+      supabase.from('requests').select('*, companies(name)').order('created_at', { ascending: true }),
+      supabase.from('companies').select('id, name').order('name'),
+    ])
+    setRequests(reqs || [])
+    setCompanies(cos || [])
     setLoading(false)
   }
   useEffect(() => { load() }, [])
 
-  const filtered = useMemo(() =>
-    activeFilter === 'All' ? requests : requests.filter(r => r.status === activeFilter),
-    [requests, activeFilter]
-  )
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!buyerOpen) return
+    function handleClick(e) {
+      if (buyerRef.current && !buyerRef.current.contains(e.target)) {
+        setBuyerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [buyerOpen])
+
+  function toggleBuyer(id) {
+    setSelectedBuyers(prev =>
+      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
+    )
+  }
+
+  const filtered = useMemo(() => {
+    let result = activeFilter === 'All' ? requests : requests.filter(r => r.status === activeFilter)
+    if (selectedBuyers.length > 0) {
+      result = result.filter(r => selectedBuyers.includes(r.company_id))
+    }
+    return result
+  }, [requests, activeFilter, selectedBuyers])
 
   return (
     <div>
@@ -40,8 +69,63 @@ export default function Requests() {
         </button>
       </div>
 
-      {/* Status filter pills */}
-      <div className="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar">
+      {/* Filter row */}
+      <div className="flex items-center gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+
+        {/* Buyer dropdown */}
+        <div className="relative flex-shrink-0" ref={buyerRef}>
+          <button
+            onClick={() => setBuyerOpen(o => !o)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              selectedBuyers.length > 0
+                ? 'bg-brand-navy text-white border-brand-navy'
+                : 'bg-white text-gray-500 border-gray-200'
+            }`}
+          >
+            Buyer
+            {selectedBuyers.length > 0 && (
+              <span className="bg-white/20 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+                {selectedBuyers.length}
+              </span>
+            )}
+            <ChevronDown size={12} className={selectedBuyers.length > 0 ? 'text-white/70' : 'text-gray-400'} />
+          </button>
+
+          {buyerOpen && (
+            <div className="absolute left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+              {/* Clear all */}
+              {selectedBuyers.length > 0 && (
+                <button
+                  onClick={() => setSelectedBuyers([])}
+                  className="w-full text-left px-4 py-2.5 text-xs text-brand-blue font-semibold border-b border-gray-50"
+                >
+                  Clear all
+                </button>
+              )}
+              <div className="max-h-64 overflow-y-auto">
+                {companies.map(c => {
+                  const checked = selectedBuyers.includes(c.id)
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => toggleBuyer(c.id)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-sm text-left text-gray-700 active:bg-gray-50 border-b border-gray-50 last:border-0"
+                    >
+                      <span className={checked ? 'font-medium text-brand-navy' : ''}>{c.name}</span>
+                      {checked && (
+                        <span className="w-5 h-5 rounded-full bg-brand-blue flex items-center justify-center flex-shrink-0">
+                          <Check size={11} className="text-white" />
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Status pills */}
         {FILTERS.map(f => (
           <button key={f} onClick={() => setActiveFilter(f)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
