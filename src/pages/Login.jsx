@@ -58,7 +58,7 @@ export default function Login() {
 
       {/* Logo */}
       <div className="text-center mb-12">
-        <div className="text-white text-4xl font-light tracking-[0.2em] mb-1">ENVIROLITE</div>
+        <img src="/envirolite-logo.svg" alt="Envirolite" className="h-10 mx-auto mb-3" />
         <div className="text-brand-blue text-xs font-medium tracking-[0.4em] uppercase">Portal</div>
       </div>
 
